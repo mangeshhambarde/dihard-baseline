@@ -6,10 +6,11 @@ vaddir=`pwd`/vad
 
 
 tracknum=-1
-nnet_dir=exp/xvector_nnet_1a
+vec_dir=exp/xvector_nnet_1a
 plda_path=default
 njobs=40
 stage=0
+vector_type="xvector"
 
 . parse_options.sh || exit 1;
 
@@ -20,6 +21,7 @@ if [ $# != 0 -o "$plda_path" = "default" -o "$tracknum" = "-1" ]; then
   echo "  --plda_path <plda-file>           # path of PLDA file"
   echo "  --njobs <n|40>                    # number of jobs"
   echo "  --stage <stage|0>                 # current stage; controls partial reruns"
+  echo "  --vector_type <ivector|xvector>   # speaker representation used"
   exit 1;
 fi
 
@@ -30,11 +32,16 @@ if [[ !( "$tracknum" == "1" || "$tracknum" == "2" || "$tracknum" == "2_den" ||
     exit 1
 fi
 
+if [ $vector_type == "xvector" ]; then
+    vec_dir=exp/xvector_nnet_1a
+else
+    vec_dir=exp/ivector
+fi
 
 echo "Running baseline for Track ${tracknum}..."
 track=track$tracknum
-dihard_dev=dihard_dev_2019_$track
-dihard_eval=dihard_eval_2019_$track
+dihard_dev=dihard_dev_2019_${vector_type}_$track
+dihard_eval=dihard_eval_2019_${vector_type}_$track
 
 # Determine max num jobs for each of DEV/EVAL.
 dev_nfiles=`wc -l < data/${dihard_dev}/wav.scp`
@@ -71,7 +78,7 @@ if [ $stage -le 1 ]; then
         else
             njobs=$eval_njobs
         fi
-	local/nnet3/xvector/prepare_feats.sh \
+	local/prepare_feats.sh \
 	    --nj $njobs --cmd "$train_cmd" \
 	    data/$name data/${name}_cmn exp/${name}_cmn
 	if [ -f data/$name/vad.scp ]; then
@@ -87,83 +94,88 @@ if [ $stage -le 1 ]; then
     echo "CMN finished."
 fi
 
-# Extract x-vectors for DIHARD 2019 development and evaluation set.
-DEV_XVEC_DIR=$nnet_dir/xvectors_${dihard_dev}
-EVAL_XVEC_DIR=$nnet_dir/xvectors_${dihard_eval}
+# Extract i-vectors or x-vectors for DIHARD 2019 development and evaluation set.
+DEV_VEC_DIR=$vec_dir/vectors_${dihard_dev}
+EVAL_VEC_DIR=$vec_dir/vectors_${dihard_eval}
+if [ $vector_type == "xvector" ]; then
+    extraction_script=diarization/nnet3/xvector/extract_xvectors.sh
+else
+    extraction_script=diarization/extract_ivectors.sh
+fi
 if [ $stage -le 2 ]; then
-    echo "Extracting x-vectors for DEV..."
+    echo "Extracting ${vector_type}s for DEV..."
     cmn_dir=data/${dihard_dev}_cmn
-    diarization/nnet3/xvector/extract_xvectors.sh \
+    $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $dev_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
-	--min-segment 0.5 $nnet_dir \
-	$cmn_dir $DEV_XVEC_DIR
-    echo "X-vector extraction finished for DEV. See $DEV_XVEC_DIR/log for logs."
+	--min-segment 0.5 $vec_dir \
+	$cmn_dir $DEV_VEC_DIR
+    echo "${vector_type} extraction finished for DEV. See $DEV_VEC_DIR/log for logs."
 
-    echo "Extracting x-vectors for EVAL..."
+    echo "Extracting ${vector_type}s for EVAL..."
     cmn_dir=data/${dihard_eval}_cmn
-    diarization/nnet3/xvector/extract_xvectors.sh \
+    $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $eval_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
-	--min-segment 0.5 $nnet_dir \
-	$cmn_dir $EVAL_XVEC_DIR
-    echo "X-vector extraction finished for EVAL. See $EVAL_XVEC_DIR/log for logs."
+	--min-segment 0.5 $vec_dir \
+	$cmn_dir $EVAL_VEC_DIR
+    echo "${vector_type} extraction finished for EVAL. See $EVAL_VEC_DIR/log for logs."
 fi
 
 # Perform PLDA scoring
-PLDA_DIR=$DEV_XVEC_DIR
-DEV_SCORE_DIR=$DEV_XVEC_DIR/plda_scores
-EVAL_SCORE_DIR=$EVAL_XVEC_DIR/plda_scores
+PLDA_DIR=$DEV_VEC_DIR
+DEV_SCORE_DIR=$DEV_VEC_DIR/plda_scores
+EVAL_SCORE_DIR=$EVAL_VEC_DIR/plda_scores
 if [ $stage -le 3 ]; then
     cp $plda_path $PLDA_DIR/plda
 
     echo "Performing PLDA scoring for DEV..."
     diarization/nnet3/xvector/score_plda.sh \
 	    --cmd "$train_cmd --mem 4G" --nj $dev_njobs \
-	    $PLDA_DIR $DEV_XVEC_DIR $DEV_SCORE_DIR
+	    $PLDA_DIR $DEV_VEC_DIR $DEV_SCORE_DIR
     echo "PLDA scoring finished for DEV. See $DEV_SCORE_DIR/log for logs."
 
     echo "Performing PLDA scoring for EVAL..."
     diarization/nnet3/xvector/score_plda.sh \
 	--cmd "$train_cmd --mem 4G" --nj $eval_njobs \
-	$PLDA_DIR $EVAL_XVEC_DIR $EVAL_SCORE_DIR
+	$PLDA_DIR $EVAL_VEC_DIR $EVAL_SCORE_DIR
     echo "PLDA scoring finished for EVAL, See $EVAL_SCORE_DIR/log for logs."
 fi
 
 # Tune clustering threshold.
 if [ $stage -le 4 ]; then
-    mkdir -p $nnet_dir/tuning_$track
+    mkdir -p $vec_dir/tuning_$track
     echo "Tuning clustering threshold using DEV..."
     best_der=100
     best_threshold=0
     for threshold in -0.5 -0.4 -0.3 -0.2 -0.1 -0.05 0 0.05 0.1 0.2 0.3 0.4 0.5; do
 	echo "Clustering with threshold $threshold..."
-	cluster_dir=${DEV_XVEC_DIR}/plda_scores_t${threshold}
+	cluster_dir=${DEV_VEC_DIR}/plda_scores_t${threshold}
 	diarization/cluster.sh \
 	    --cmd "$train_cmd --mem 4G" --nj $dev_njobs \
 	    --threshold $threshold --rttm-channel 1 \
 	    $DEV_SCORE_DIR $cluster_dir
 	perl md_eval.pl -r data/${dihard_dev}/rttm \
 	     -s $cluster_dir/rttm \
-	     2> $nnet_dir/tuning_$track/${dihard_dev}_t${threshold}.log \
-	     > $nnet_dir/tuning_$track/${dihard_dev}_t${threshold}
+	     2> $vec_dir/tuning_$track/${dihard_dev}_t${threshold}.log \
+	     > $vec_dir/tuning_$track/${dihard_dev}_t${threshold}
 	der=$(grep -oP 'DIARIZATION\ ERROR\ =\ \K[0-9]+([.][0-9]+)?' \
-		   $nnet_dir/tuning_$track/${dihard_dev}_t${threshold})
+		   $vec_dir/tuning_$track/${dihard_dev}_t${threshold})
 	if [ $(echo $der'<'$best_der | bc -l) -eq 1 ]; then
             best_der=$der
             best_threshold=$threshold
 	fi
     done
-    echo "Threshold tuning finished. See $DEV_XVEC_DIR/plda_scores_t*/log for logs."
+    echo "Threshold tuning finished. See $DEV_VEC_DIR/plda_scores_t*/log for logs."
     echo "*** Best threshold is: $best_threshold. PLDA scores of eval x-vectors will "
     echo "**  be clustered using this threshold"
     echo "*** DER on dev set using best threshold is: $best_der"
-    echo "$best_threshold" > $nnet_dir/tuning_$track/${dihard_dev}_best
+    echo "$best_threshold" > $vec_dir/tuning_$track/${dihard_dev}_best
 fi
 
 # Cluster.
 if [ $stage -le 5 ]; then
-    best_threshold=$(cat $nnet_dir/tuning_$track/${dihard_dev}_best)
+    best_threshold=$(cat $vec_dir/tuning_$track/${dihard_dev}_best)
        
     echo "Performing agglomerative hierarchical clustering (AHC) using threshold $best_threshold for DEV..."
     diarization/cluster.sh \

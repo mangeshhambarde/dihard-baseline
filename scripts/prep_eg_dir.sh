@@ -19,9 +19,7 @@ BNS="alltracksrun.sh md_eval.pl"
 for bn in $BNS; do
     src_path=$SCRIPTS_DIR/$bn
     dest_path=$DIHARD_EG_DIR/$bn
-    if [ ! -f $dest_path ]; then
-	cp $src_path $dest_path
-    fi
+    cp $src_path $dest_path
 done
 
 BNS="beamformit.cfg"
@@ -33,13 +31,11 @@ for bn in $BNS; do
         cp $src_path $dest_path
     fi
 done
-BNS="flac_to_wav.sh make_data_dir.py run_beamformit.sh run_denoising.sh run_vad.sh split_rttm.py"
+BNS="flac_to_wav.sh make_data_dir.py run_beamformit.sh run_denoising.sh run_vad.sh split_rttm.py prepare_feats.sh"
 for bn in $BNS; do
     src_path=$SCRIPTS_DIR/$bn
     dest_path=$DIHARD_EG_DIR/local/$bn
-    if [ ! -f $dest_path ]; then
-	cp $src_path $dest_path
-    fi
+    cp $src_path $dest_path
 done
 
 XVEC_DIR=$DIHARD_EG_DIR/exp/xvector_nnet_1a
@@ -48,6 +44,17 @@ BNS="final.raw max_chunk_size min_chunk_size extract.config plda_track1 plda_tra
 for bn in $BNS; do
     src_path=$DATA_DIR/$bn
     dest_path=$XVEC_DIR/$bn
+    if [ ! -f $dest_path ]; then
+        cp $src_path $dest_path
+    fi
+done
+
+IVEC_DIR=$DIHARD_EG_DIR/exp/ivector
+mkdir -p $IVEC_DIR
+BNS="final.ubm final.ie"
+for bn in $BNS; do
+    src_path=$DATA_DIR/$bn
+    dest_path=$IVEC_DIR/$bn
     if [ ! -f $dest_path ]; then
         cp $src_path $dest_path
     fi

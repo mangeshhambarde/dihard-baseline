@@ -2,6 +2,11 @@
 
 export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" # for virtualenv
 
+#####################################
+### Mangesh: experiment params ######
+#####################################
+vector_type="xvector"
+
 set -e
 
 NJOBS=40
@@ -39,7 +44,7 @@ echo $PWD
 
 # Prepare data directory for DEV set.
 echo "Preparing data directory for DEV set..."
-DEV_DATA_DIR=data/dihard_dev_2019_track1
+DEV_DATA_DIR=data/dihard_dev_2019_${vector_type}_track1
 rm -fr $DEV_DATA_DIR
 local/make_data_dir.py \
    --audio_ext '.flac' \
@@ -51,7 +56,7 @@ utils/fix_data_dir.sh $DEV_DATA_DIR
 
 # Prepare data directory for EVAL set.
 echo "Preparing data directory for EVAL set...."
-EVAL_DATA_DIR=data/dihard_eval_2019_track1
+EVAL_DATA_DIR=data/dihard_eval_2019_${vector_type}_track1
 rm -fr $EVAL_DATA_DIR
 local/make_data_dir.py \
    --audio_ext	'.flac'	\
@@ -62,16 +67,16 @@ utils/fix_data_dir.sh $EVAL_DATA_DIR
 
 # Diarize.
 echo "Diarizing..."
-./alltracksrun.sh --tracknum 1 --plda_path exp/xvector_nnet_1a/plda_track1 --njobs $NJOBS
+./alltracksrun.sh --vector_type $vector_type --tracknum 1 --plda_path exp/xvector_nnet_1a/plda_track1 --njobs $NJOBS
 
 # Extract dev/eval RTTM files.
 echo "Extracting RTTM files..."
 DEV_RTTM_DIR=$THIS_DIR/rttm_dev
 local/split_rttm.py \
-    exp/xvector_nnet_1a/xvectors_dihard_dev_2019_track1/plda_scores/rttm $DEV_RTTM_DIR
+    exp/xvector_nnet_1a/vectors_dihard_dev_2019_${vector_type}_track1/plda_scores/rttm $DEV_RTTM_DIR
 EVAL_RTTM_DIR=$THIS_DIR/rttm_eval
 local/split_rttm.py \
-    exp/xvector_nnet_1a/xvectors_dihard_eval_2019_track1/plda_scores/rttm $EVAL_RTTM_DIR
+    exp/xvector_nnet_1a/vectors_dihard_eval_2019_${vector_type}_track1/plda_scores/rttm $EVAL_RTTM_DIR
 
 popd > /dev/null
 
