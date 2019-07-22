@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" # for virtualenv
+
 set -e
 
 NJOBS=40
@@ -9,11 +11,10 @@ PYTHON=python
 #### Set following paths  ###########
 #####################################
 # Path to root of DIHARD II dev release (LDC2019E31).
-DIHARD_DEV_DIR=/scratch/nryant/dihard2/deliveries/LDC2019E31_Second_DIHARD_Challenge_Development_Data/
+DIHARD_DEV_DIR=/share/spandh.ami1/embed-stud-proj/2018/mangesh/ws/dissertation/corpora/dihard-dev
 
 # Path to root of DIHARD II eval release (LDC2019E32).
-DIHARD_EVAL_DIR=/scratch/nryant/dihard2/deliveries/LDC2019E32_Second_DIHARD_Challenge_Evaluation_Data_SCRUBBED/
-
+DIHARD_EVAL_DIR=/share/spandh.ami1/embed-stud-proj/2018/mangesh/ws/dissertation/corpora/dihard-eval
 
 #####################################
 #### Check deps satisfied ###########
