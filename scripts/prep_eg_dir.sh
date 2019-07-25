@@ -51,7 +51,7 @@ done
 
 IVEC_DIR=$DIHARD_EG_DIR/exp/ivector
 mkdir -p $IVEC_DIR
-BNS="final.ubm final.ie"
+BNS="final.ubm final.ie transform.mat"
 for bn in $BNS; do
     src_path=$DATA_DIR/$bn
     dest_path=$IVEC_DIR/$bn

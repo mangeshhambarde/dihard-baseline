@@ -80,6 +80,7 @@ if [ $stage -le 1 ]; then
         fi
 	local/prepare_feats.sh \
 	    --nj $njobs --cmd "$train_cmd" \
+	    --vector-type "$vector_type" \
 	    data/$name data/${name}_cmn exp/${name}_cmn
 	if [ -f data/$name/vad.scp ]; then
 	    echo "vad.scp found .. copying it"

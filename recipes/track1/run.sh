@@ -5,7 +5,7 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 #####################################
 ### Mangesh: experiment params ######
 #####################################
-vector_type="xvector"
+vector_type="ivector"
 
 set -e
 
