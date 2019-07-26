@@ -10,7 +10,7 @@ vec_dir=exp/xvector_nnet_1a
 plda_path=default
 njobs=40
 stage=0
-vector_type="xvector"
+vector_type="xvector" # default option.
 
 . parse_options.sh || exit 1;
 
@@ -95,7 +95,7 @@ if [ $stage -le 1 ]; then
     echo "CMN finished."
 fi
 
-# Extract i-vectors or x-vectors for DIHARD 2019 development and evaluation set.
+# Extract i/x-vectors for DIHARD 2019 development and evaluation set.
 DEV_VEC_DIR=$vec_dir/vectors_${dihard_dev}
 EVAL_VEC_DIR=$vec_dir/vectors_${dihard_eval}
 if [ $vector_type == "xvector" ]; then
@@ -127,17 +127,22 @@ fi
 PLDA_DIR=$DEV_VEC_DIR
 DEV_SCORE_DIR=$DEV_VEC_DIR/plda_scores
 EVAL_SCORE_DIR=$EVAL_VEC_DIR/plda_scores
+if [ $vector_type == "xvector" ]; then
+    scoring_script=diarization/nnet3/xvector/score_plda.sh
+else
+    scoring_script=diarization/score_plda.sh
+fi
 if [ $stage -le 3 ]; then
     cp $plda_path $PLDA_DIR/plda
 
     echo "Performing PLDA scoring for DEV..."
-    diarization/nnet3/xvector/score_plda.sh \
+    $scoring_script \
 	    --cmd "$train_cmd --mem 4G" --nj $dev_njobs \
 	    $PLDA_DIR $DEV_VEC_DIR $DEV_SCORE_DIR
     echo "PLDA scoring finished for DEV. See $DEV_SCORE_DIR/log for logs."
 
     echo "Performing PLDA scoring for EVAL..."
-    diarization/nnet3/xvector/score_plda.sh \
+    $scoring_script \
 	--cmd "$train_cmd --mem 4G" --nj $eval_njobs \
 	$PLDA_DIR $EVAL_VEC_DIR $EVAL_SCORE_DIR
     echo "PLDA scoring finished for EVAL, See $EVAL_SCORE_DIR/log for logs."
@@ -168,7 +173,7 @@ if [ $stage -le 4 ]; then
 	fi
     done
     echo "Threshold tuning finished. See $DEV_VEC_DIR/plda_scores_t*/log for logs."
-    echo "*** Best threshold is: $best_threshold. PLDA scores of eval x-vectors will "
+    echo "*** Best threshold is: $best_threshold. PLDA scores of eval ${vector_type}s will "
     echo "**  be clustered using this threshold"
     echo "*** DER on dev set using best threshold is: $best_der"
     echo "$best_threshold" > $vec_dir/tuning_$track/${dihard_dev}_best

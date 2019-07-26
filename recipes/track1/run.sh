@@ -16,10 +16,10 @@ PYTHON=python
 #### Set following paths  ###########
 #####################################
 # Path to root of DIHARD II dev release (LDC2019E31).
-DIHARD_DEV_DIR=/share/spandh.ami1/embed-stud-proj/2018/mangesh/ws/dissertation/corpora/dihard-dev
+DIHARD_DEV_DIR=/share/mini5/data/audvis/dia/dihard-2018-dev-for-use-with-2019-baseline
 
 # Path to root of DIHARD II eval release (LDC2019E32).
-DIHARD_EVAL_DIR=/share/spandh.ami1/embed-stud-proj/2018/mangesh/ws/dissertation/corpora/dihard-eval
+DIHARD_EVAL_DIR=/share/mini5/data/audvis/dia/dihard-2018-eval-for-use-with-2019-baseline
 
 #####################################
 #### Check deps satisfied ###########
@@ -32,7 +32,7 @@ if [ -z	$KALDI_DIR ]; then
     echo "KALDI_DIR not defined. Please run tools/install_kaldi.sh"
     exit 1
 fi
-$SCRIPTS_DIR/prep_eg_dir.sh
+$SCRIPTS_DIR/prep_eg_dir.sh --vector-type $vector_type
 
 
 #####################################
@@ -87,5 +87,13 @@ $PYTHON $DSCORE_DIR/score.py \
     -r $DIHARD_DEV_DIR/data/single_channel/rttm/*.rttm \
     -s $DEV_RTTM_DIR/*.rttm \
     > metrics_dev.stdout 2> metrics_dev.stderr
+
+# Score system outputs for EVAL set against reference.
+echo "Scoring EVAL set RTTM..."
+$PYTHON $DSCORE_DIR/score.py \
+    -u $DIHARD_EVAL_DIR/data/single_channel/uem/all.uem \
+    -r $DIHARD_EVAL_DIR/data/single_channel/rttm/*.rttm \
+    -s $EVAL_RTTM_DIR/*.rttm \
+    > metrics_eval.stdout 2> metrics_eval.stderr
 
 echo "Run finished successfully."

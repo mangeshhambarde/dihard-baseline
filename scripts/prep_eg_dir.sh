@@ -1,10 +1,15 @@
 #!/bin/bash
 # Prepare the ``egs/dihard_2018/v2`` directory for experiments.
+
+vector_type="xvector" # default option.
+
 THIS_DIR=`realpath $(dirname "$0")`
 DATA_DIR=$THIS_DIR/../data
 KALDI_DIR=$THIS_DIR/../tools/kaldi
 SCRIPTS_DIR=$THIS_DIR/../scripts
 DIHARD_EG_DIR=$KALDI_DIR/egs/dihard_2018/v2
+
+. $KALDI_DIR/egs/wsj/s5/utils/parse_options.sh || exit 1;
 
 if [ -f $KALDI_DIR ]; then
     echo "$KALDI_DIR not found. Please run ``tools/install_kaldi.sh``"
@@ -15,7 +20,7 @@ if [ -f $DIHARD_EG_DIR ]; then
     exit 1
 fi
 
-BNS="alltracksrun.sh md_eval.pl"
+BNS="alltracksrun.sh md_eval.pl clean_slate.sh"
 for bn in $BNS; do
     src_path=$SCRIPTS_DIR/$bn
     dest_path=$DIHARD_EG_DIR/$bn
@@ -59,3 +64,11 @@ for bn in $BNS; do
         cp $src_path $dest_path
     fi
 done
+
+# Change MFCC config based on argument.
+echo "Copying appropriate mfcc.conf"
+if [ $vector_type == "xvector" ]; then
+    cp $DATA_DIR/mfcc-xvector.conf $CONF_DIR/mfcc.conf
+else
+    cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR/mfcc.conf
+fi
