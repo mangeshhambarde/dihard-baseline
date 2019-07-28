@@ -67,8 +67,6 @@ done
 
 # Change MFCC config based on argument.
 echo "Copying appropriate mfcc.conf"
-if [ $vector_type == "xvector" ]; then
-    cp $DATA_DIR/mfcc-xvector.conf $CONF_DIR/mfcc.conf
-else
-    cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR/mfcc.conf
+if [ $vector_type == "ivector" ]; then
+    cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR/mfcc-ivector.conf
 fi
