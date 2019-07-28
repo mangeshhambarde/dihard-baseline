@@ -27,7 +27,7 @@ for bn in $BNS; do
     cp $src_path $dest_path
 done
 
-BNS="beamformit.cfg"
+BNS="beamformit.cfg mfcc-ivector.conf"
 CONF_DIR=$DIHARD_EG_DIR/conf
 for bn in $BNS; do
     src_path=$DATA_DIR/$bn
@@ -56,7 +56,7 @@ done
 
 IVEC_DIR=$DIHARD_EG_DIR/exp/ivector
 mkdir -p $IVEC_DIR
-BNS="final.ubm final.ie transform.mat"
+BNS="final.ie final.ubm plda"
 for bn in $BNS; do
     src_path=$DATA_DIR/$bn
     dest_path=$IVEC_DIR/$bn

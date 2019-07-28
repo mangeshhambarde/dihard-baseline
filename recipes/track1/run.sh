@@ -6,11 +6,20 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 ### Mangesh: experiment params ######
 #####################################
 vector_type="ivector"
+#####################################
 
 set -e
 
 NJOBS=40
 PYTHON=python
+
+if [ $vector_type == "xvector" ]; then
+    exp_dir=exp/xvector_nnet_1a
+    plda_path=$exp_dir/plda_track1
+else
+    exp_dir=exp/ivector
+    plda_path=$exp_dir/plda
+fi
 
 #####################################
 #### Set following paths  ###########
@@ -67,16 +76,16 @@ utils/fix_data_dir.sh $EVAL_DATA_DIR
 
 # Diarize.
 echo "Diarizing..."
-./alltracksrun.sh --vector_type $vector_type --tracknum 1 --plda_path exp/xvector_nnet_1a/plda_track1 --njobs $NJOBS
+./alltracksrun.sh --vector_type $vector_type --tracknum 1 --plda_path $plda_path --njobs $NJOBS
 
 # Extract dev/eval RTTM files.
 echo "Extracting RTTM files..."
 DEV_RTTM_DIR=$THIS_DIR/rttm_dev
 local/split_rttm.py \
-    exp/xvector_nnet_1a/vectors_dihard_dev_2019_${vector_type}_track1/plda_scores/rttm $DEV_RTTM_DIR
+    $exp_dir/vectors_dihard_dev_2019_${vector_type}_track1/plda_scores/rttm $DEV_RTTM_DIR
 EVAL_RTTM_DIR=$THIS_DIR/rttm_eval
 local/split_rttm.py \
-    exp/xvector_nnet_1a/vectors_dihard_eval_2019_${vector_type}_track1/plda_scores/rttm $EVAL_RTTM_DIR
+    $exp_dir/vectors_dihard_eval_2019_${vector_type}_track1/plda_scores/rttm $EVAL_RTTM_DIR
 
 popd > /dev/null
 

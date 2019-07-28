@@ -34,8 +34,10 @@ fi
 
 if [ $vector_type == "xvector" ]; then
     vec_dir=exp/xvector_nnet_1a
+    mfcc_conf_file="conf/mfcc.conf"
 else
     vec_dir=exp/ivector
+    mfcc_conf_file="conf/mfcc-ivector.conf"
 fi
 
 echo "Running baseline for Track ${tracknum}..."
@@ -61,7 +63,7 @@ if [ $stage -le 0 ]; then
 	set +e # We expect failures for short segments.
 	steps/make_mfcc.sh \
 	    --cmd "$train_cmd --max-jobs-run 20" --nj $njobs \
-	    --write-utt2num-frames true --mfcc-config conf/mfcc.conf \
+	    --write-utt2num-frames true --mfcc-config $mfcc_conf_file \
 	    data/${name} exp/make_mfcc/$name $mfccdir
 	set -e
 	utils/fix_data_dir.sh data/${name}
@@ -100,8 +102,10 @@ DEV_VEC_DIR=$vec_dir/vectors_${dihard_dev}
 EVAL_VEC_DIR=$vec_dir/vectors_${dihard_eval}
 if [ $vector_type == "xvector" ]; then
     extraction_script=diarization/nnet3/xvector/extract_xvectors.sh
+    pca_dim=-1
 else
     extraction_script=diarization/extract_ivectors.sh
+    pca_dim=200
 fi
 if [ $stage -le 2 ]; then
     echo "Extracting ${vector_type}s for DEV..."
@@ -109,7 +113,7 @@ if [ $stage -le 2 ]; then
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $dev_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
-	--min-segment 0.5 $vec_dir \
+	--min-segment 0.5 $vec_dir --pca-dim $pca_dim \
 	$cmn_dir $DEV_VEC_DIR
     echo "${vector_type} extraction finished for DEV. See $DEV_VEC_DIR/log for logs."
 
@@ -118,7 +122,7 @@ if [ $stage -le 2 ]; then
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $eval_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
-	--min-segment 0.5 $vec_dir \
+	--min-segment 0.5 $vec_dir --pca-dim $pca_dim \
 	$cmn_dir $EVAL_VEC_DIR
     echo "${vector_type} extraction finished for EVAL. See $EVAL_VEC_DIR/log for logs."
 fi
