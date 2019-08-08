@@ -113,7 +113,7 @@ if [ $stage -le 2 ]; then
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $dev_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
-	--min-segment 0.5 $vec_dir --pca-dim $pca_dim \
+	--min-segment 0.5 --pca-dim $pca_dim $vec_dir \
 	$cmn_dir $DEV_VEC_DIR
     echo "${vector_type} extraction finished for DEV. See $DEV_VEC_DIR/log for logs."
 
@@ -122,7 +122,7 @@ if [ $stage -le 2 ]; then
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $eval_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
-	--min-segment 0.5 $vec_dir --pca-dim $pca_dim \
+	--min-segment 0.5 --pca-dim $pca_dim $vec_dir \
 	$cmn_dir $EVAL_VEC_DIR
     echo "${vector_type} extraction finished for EVAL. See $EVAL_VEC_DIR/log for logs."
 fi
