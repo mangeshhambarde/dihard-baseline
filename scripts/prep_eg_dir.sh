@@ -20,7 +20,7 @@ if [ -f $DIHARD_EG_DIR ]; then
     exit 1
 fi
 
-BNS="alltracksrun.sh md_eval.pl clean_slate.sh"
+BNS="alltracksrun.sh md_eval.pl cmd.sh clean_slate.sh"
 for bn in $BNS; do
     src_path=$SCRIPTS_DIR/$bn
     dest_path=$DIHARD_EG_DIR/$bn
