@@ -5,8 +5,33 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 #####################################
 ### Mangesh: experiment params ######
 #####################################
-vector_type="ivector"
+system_id="sys4"
 #####################################
+
+echo "Running system: $system_id"
+
+pca_dim=-1
+
+if [ $system_id == "sys1" ]; then
+    vector_type="xvector"
+    plda_file="plda_track1"
+    model_file="final.raw"
+elif [ $system_id == "sys2" ]; then
+    vector_type="ivector"
+    plda_file="ivector-pretrained.plda"
+    model_file="ivector-pretrained.ie ivector-pretrained.ubm"
+    pca_dim=200
+elif [ $system_id == "sys3" ]; then
+    vector_type="xvector"
+    plda_file="dev-xvector.plda"
+    model_file="dev-xvector.raw"
+    pca_dim=200
+elif [ $system_id == "sys4" ]; then
+    vector_type="ivector"
+    plda_file="dev-ivector.plda"
+    model_file="dev-ivector.ie dev-ivector.ubm"
+    pca_dim=200
+fi
 
 set -e
 
@@ -15,10 +40,8 @@ PYTHON=python
 
 if [ $vector_type == "xvector" ]; then
     exp_dir=exp/xvector_nnet_1a
-    plda_path=$exp_dir/plda_track1
 else
     exp_dir=exp/ivector
-    plda_path=$exp_dir/plda
 fi
 
 #####################################
@@ -41,7 +64,7 @@ if [ -z	$KALDI_DIR ]; then
     echo "KALDI_DIR not defined. Please run tools/install_kaldi.sh"
     exit 1
 fi
-$SCRIPTS_DIR/prep_eg_dir.sh --vector-type $vector_type
+$SCRIPTS_DIR/prep_eg_dir.sh --vector-type $vector_type --model-file "$model_file" --plda-file $plda_file
 
 
 #####################################
@@ -76,7 +99,7 @@ utils/fix_data_dir.sh $EVAL_DATA_DIR
 
 # Diarize.
 echo "Diarizing..."
-./alltracksrun.sh --vector_type $vector_type --tracknum 1 --plda_path $plda_path --njobs $NJOBS
+./alltracksrun.sh --vector_type $vector_type --tracknum 1 --plda_path $exp_dir/plda --njobs $NJOBS --pca_dim $pca_dim
 
 # Extract dev/eval RTTM files.
 echo "Extracting RTTM files..."

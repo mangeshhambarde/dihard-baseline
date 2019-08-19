@@ -2,6 +2,8 @@
 # Prepare the ``egs/dihard_2018/v2`` directory for experiments.
 
 vector_type="xvector" # default option.
+model_file="final.raw"
+plda_file="plda_track1"
 
 THIS_DIR=`realpath $(dirname "$0")`
 DATA_DIR=$THIS_DIR/../data
@@ -20,21 +22,19 @@ if [ -f $DIHARD_EG_DIR ]; then
     exit 1
 fi
 
-BNS="alltracksrun.sh md_eval.pl cmd.sh clean_slate.sh"
+BNS="alltracksrun.sh md_eval.pl clean_slate.sh"
 for bn in $BNS; do
     src_path=$SCRIPTS_DIR/$bn
     dest_path=$DIHARD_EG_DIR/$bn
     cp $src_path $dest_path
 done
 
-BNS="beamformit.cfg mfcc-ivector.conf"
+BNS="beamformit.cfg"
 CONF_DIR=$DIHARD_EG_DIR/conf
 for bn in $BNS; do
     src_path=$DATA_DIR/$bn
     dest_path=$CONF_DIR/$bn
-    if [ ! -f $dest_path ]; then
-        cp $src_path $dest_path
-    fi
+    cp $src_path $dest_path
 done
 BNS="flac_to_wav.sh make_data_dir.py run_beamformit.sh run_denoising.sh run_vad.sh split_rttm.py prepare_feats.sh"
 for bn in $BNS; do
@@ -43,30 +43,37 @@ for bn in $BNS; do
     cp $src_path $dest_path
 done
 
-XVEC_DIR=$DIHARD_EG_DIR/exp/xvector_nnet_1a
-mkdir -p $XVEC_DIR
-BNS="final.raw max_chunk_size min_chunk_size extract.config plda_track1 plda_track2 plda_track3 plda_track4"
+if [ $vector_type == "ivector" ]; then
+    VEC_DIR=$DIHARD_EG_DIR/exp/ivector
+elif [ $vector_type == "xvector" ]; then
+    VEC_DIR=$DIHARD_EG_DIR/exp/xvector_nnet_1a
+fi
+
+mkdir -p $VEC_DIR
+
+BNS="max_chunk_size min_chunk_size extract.config"
 for bn in $BNS; do
     src_path=$DATA_DIR/$bn
-    dest_path=$XVEC_DIR/$bn
-    if [ ! -f $dest_path ]; then
-        cp $src_path $dest_path
-    fi
+    dest_path=$VEC_DIR/$bn
+    cp $src_path $dest_path
 done
 
-IVEC_DIR=$DIHARD_EG_DIR/exp/ivector
-mkdir -p $IVEC_DIR
-BNS="final.ie final.ubm plda"
-for bn in $BNS; do
+# Copy nnet or ivec models.
+BNS="$model_file"
+for bn in $(echo $BNS); do
+    fileext=${bn##*.}
     src_path=$DATA_DIR/$bn
-    dest_path=$IVEC_DIR/$bn
-    if [ ! -f $dest_path ]; then
-        cp $src_path $dest_path
-    fi
+    dest_path=$VEC_DIR/"final.$fileext"
+    cp $src_path $dest_path
 done
+
+# Copy PLDA file.
+cp $DATA_DIR/$plda_file $VEC_DIR/plda
 
 # Change MFCC config based on argument.
 echo "Copying appropriate mfcc.conf"
 if [ $vector_type == "ivector" ]; then
-    cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR/mfcc-ivector.conf
+    cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR
+elif [ $vector_type == "xvector" ]; then
+    cp $DATA_DIR/mfcc-xvector.conf $CONF_DIR
 fi

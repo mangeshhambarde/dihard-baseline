@@ -11,6 +11,7 @@ plda_path=default
 njobs=40
 stage=0
 vector_type="xvector" # default option.
+pca_dim=-1
 
 . parse_options.sh || exit 1;
 
@@ -34,7 +35,7 @@ fi
 
 if [ $vector_type == "xvector" ]; then
     vec_dir=exp/xvector_nnet_1a
-    mfcc_conf_file="conf/mfcc.conf"
+    mfcc_conf_file="conf/mfcc-xvector.conf"
 else
     vec_dir=exp/ivector
     mfcc_conf_file="conf/mfcc-ivector.conf"
@@ -102,10 +103,8 @@ DEV_VEC_DIR=$vec_dir/vectors_${dihard_dev}
 EVAL_VEC_DIR=$vec_dir/vectors_${dihard_eval}
 if [ $vector_type == "xvector" ]; then
     extraction_script=diarization/nnet3/xvector/extract_xvectors.sh
-    pca_dim=-1
 else
     extraction_script=diarization/extract_ivectors.sh
-    pca_dim=200
 fi
 if [ $stage -le 2 ]; then
     echo "Extracting ${vector_type}s for DEV..."
