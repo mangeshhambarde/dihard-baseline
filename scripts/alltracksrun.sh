@@ -5,46 +5,39 @@ mfccdir=`pwd`/mfcc
 vaddir=`pwd`/vad
 
 
-tracknum=-1
-vec_dir=exp/xvector_nnet_1a
+vec_dir="exp/default"
 plda_path=default
 njobs=40
 stage=0
 vector_type="xvector" # default option.
 pca_dim=-1
+system_id="default"
 
 . parse_options.sh || exit 1;
 
-if [ $# != 0 -o "$plda_path" = "default" -o "$tracknum" = "-1" ]; then
-  echo "Usage: $0 --tracknum <1|2> --plda_path <path of plda file>"
+if [ $# != 0 -o "$plda_path" = "default" ]; then
+  echo "Usage: $0 --plda_path <path of plda file>"
   echo "main options (for others, see top of script file)"
-  echo "  --tracknum <track number>         # number associated with the track to be run"
   echo "  --plda_path <plda-file>           # path of PLDA file"
   echo "  --njobs <n|40>                    # number of jobs"
   echo "  --stage <stage|0>                 # current stage; controls partial reruns"
   echo "  --vector_type <ivector|xvector>   # speaker representation used"
+  echo "  --system_id                          # system_id id"
   exit 1;
 fi
 
-
-if [[ !( "$tracknum" == "1" || "$tracknum" == "2" || "$tracknum" == "2_den" ||
-         "$tracknum" == "3" || "$tracknum" == "4" || "$tracknum" == "4_den") ]]; then
-    echo "ERROR: Unrecognized track."
-    exit 1
-fi
+# Set exp directory.
+vec_dir=exp/${system_id}
 
 if [ $vector_type == "xvector" ]; then
-    vec_dir=exp/xvector_nnet_1a
     mfcc_conf_file="conf/mfcc-xvector.conf"
 else
-    vec_dir=exp/ivector
     mfcc_conf_file="conf/mfcc-ivector.conf"
 fi
 
-echo "Running baseline for Track ${tracknum}..."
-track=track$tracknum
-dihard_dev=dihard_dev_2019_${vector_type}_$track
-dihard_eval=dihard_eval_2019_${vector_type}_$track
+# Set exp directory.
+dihard_dev=${system_id}_dev
+dihard_eval=${system_id}_eval
 
 # Determine max num jobs for each of DEV/EVAL.
 dev_nfiles=`wc -l < data/${dihard_dev}/wav.scp`
@@ -84,7 +77,7 @@ if [ $stage -le 1 ]; then
 	local/prepare_feats.sh \
 	    --nj $njobs --cmd "$train_cmd" \
 	    --vector-type "$vector_type" \
-	    data/$name data/${name}_cmn exp/${name}_cmn
+	    data/$name data/${name}_cmn exp/${system_id}/${name}_cmn
 	if [ -f data/$name/vad.scp ]; then
 	    echo "vad.scp found .. copying it"
 	    cp data/$name/vad.scp data/${name}_cmn/
@@ -153,7 +146,7 @@ fi
 
 # Tune clustering threshold.
 if [ $stage -le 4 ]; then
-    mkdir -p $vec_dir/tuning_$track
+    mkdir -p $vec_dir/tuning
     echo "Tuning clustering threshold using DEV..."
     best_der=100
     best_threshold=0
@@ -166,10 +159,10 @@ if [ $stage -le 4 ]; then
 	    $DEV_SCORE_DIR $cluster_dir
 	perl md_eval.pl -r data/${dihard_dev}/rttm \
 	     -s $cluster_dir/rttm \
-	     2> $vec_dir/tuning_$track/${dihard_dev}_t${threshold}.log \
-	     > $vec_dir/tuning_$track/${dihard_dev}_t${threshold}
+	     2> $vec_dir/tuning/${dihard_dev}_t${threshold}.log \
+	     > $vec_dir/tuning/${dihard_dev}_t${threshold}
 	der=$(grep -oP 'DIARIZATION\ ERROR\ =\ \K[0-9]+([.][0-9]+)?' \
-		   $vec_dir/tuning_$track/${dihard_dev}_t${threshold})
+		   $vec_dir/tuning/${dihard_dev}_t${threshold})
 	if [ $(echo $der'<'$best_der | bc -l) -eq 1 ]; then
             best_der=$der
             best_threshold=$threshold
@@ -179,12 +172,12 @@ if [ $stage -le 4 ]; then
     echo "*** Best threshold is: $best_threshold. PLDA scores of eval ${vector_type}s will "
     echo "**  be clustered using this threshold"
     echo "*** DER on dev set using best threshold is: $best_der"
-    echo "$best_threshold" > $vec_dir/tuning_$track/${dihard_dev}_best
+    echo "$best_threshold" > $vec_dir/tuning/${dihard_dev}_best
 fi
 
 # Cluster.
 if [ $stage -le 5 ]; then
-    best_threshold=$(cat $vec_dir/tuning_$track/${dihard_dev}_best)
+    best_threshold=$(cat $vec_dir/tuning/${dihard_dev}_best)
        
     echo "Performing agglomerative hierarchical clustering (AHC) using threshold $best_threshold for DEV..."
     diarization/cluster.sh \

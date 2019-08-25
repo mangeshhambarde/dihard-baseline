@@ -4,6 +4,7 @@
 vector_type="xvector" # default option.
 model_file="final.raw"
 plda_file="plda_track1"
+system_id="default"
 
 THIS_DIR=`realpath $(dirname "$0")`
 DATA_DIR=$THIS_DIR/../data
@@ -43,11 +44,7 @@ for bn in $BNS; do
     cp $src_path $dest_path
 done
 
-if [ $vector_type == "ivector" ]; then
-    VEC_DIR=$DIHARD_EG_DIR/exp/ivector
-elif [ $vector_type == "xvector" ]; then
-    VEC_DIR=$DIHARD_EG_DIR/exp/xvector_nnet_1a
-fi
+VEC_DIR=$DIHARD_EG_DIR/exp/${system_id}
 
 mkdir -p $VEC_DIR
 
