@@ -5,7 +5,7 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 #####################################
 ### Mangesh: experiment params ######
 #####################################
-system_id="sys5"
+system_id="test"
 #####################################
 
 echo "Running system: $system_id"
@@ -40,6 +40,24 @@ elif [ $system_id == "sys5" ]; then
     vector_type="xvector"
     plda_file="xvector-pretrained.plda"
     model_file="xvector-pretrained.raw"
+    pca_dim=200
+elif [ $system_id == "sys6" ]; then
+    # i-vector model trained using voxceleb1+dev.
+    vector_type="ivector"
+    plda_file="vox1dev-ivector.plda"
+    model_file="vox1dev-ivector.ie vox1dev-ivector.ubm"
+    pca_dim=200
+elif [ $system_id == "sys7" ]; then
+    # x-vector model trained using voxceleb1+dev.
+    vector_type="xvector"
+    plda_file="vox1dev-xvector.plda"
+    model_file="vox1dev-xvector.raw"
+    pca_dim=200
+elif [ $system_id == "test" ]; then
+    # Only for testing.
+    vector_type="xvector"
+    plda_file="x.plda"
+    model_file="x.raw"
     pca_dim=200
 fi
 
@@ -109,22 +127,26 @@ echo "Diarizing..."
 
 # Extract dev/eval RTTM files.
 echo "Extracting RTTM files..."
-DEV_RTTM_DIR=$THIS_DIR/rttm_dev
+DEV_RTTM_DIR=$THIS_DIR/rttm/$system_id/rttm_dev
+mkdir -p DEV_RTTM_DIR
 local/split_rttm.py \
     $exp_dir/vectors_${system_id}_dev/plda_scores/rttm $DEV_RTTM_DIR
-EVAL_RTTM_DIR=$THIS_DIR/rttm_eval
+EVAL_RTTM_DIR=$THIS_DIR/rttm/$system_id/rttm_eval
+mkdir -p EVAL_RTTM_DIR
 local/split_rttm.py \
     $exp_dir/vectors_${system_id}_eval/plda_scores/rttm $EVAL_RTTM_DIR
 
 popd > /dev/null
 
 # Score system outputs for DEV set against reference.
+METRICS_DIR=$THIS_DIR/metrics/$system_id
+mkdir -p $METRICS_DIR
 echo "Scoring DEV set RTTM..."
 $PYTHON $DSCORE_DIR/score.py \
     -u $DIHARD_DEV_DIR/data/single_channel/uem/all.uem \
     -r $DIHARD_DEV_DIR/data/single_channel/rttm/*.rttm \
     -s $DEV_RTTM_DIR/*.rttm \
-    > metrics_dev.stdout 2> metrics_dev.stderr
+    > $METRICS_DIR/metrics_dev.stdout 2> $METRICS_DIR/metrics_dev.stderr
 
 # Score system outputs for EVAL set against reference.
 echo "Scoring EVAL set RTTM..."
@@ -132,6 +154,6 @@ $PYTHON $DSCORE_DIR/score.py \
     -u $DIHARD_EVAL_DIR/data/single_channel/uem/all.uem \
     -r $DIHARD_EVAL_DIR/data/single_channel/rttm/*.rttm \
     -s $EVAL_RTTM_DIR/*.rttm \
-    > metrics_eval.stdout 2> metrics_eval.stderr
+    > $METRICS_DIR/metrics_eval.stdout 2> $METRICS_DIR/metrics_eval.stderr
 
 echo "Run finished successfully."
