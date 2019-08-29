@@ -31,8 +31,10 @@ vec_dir=exp/${system_id}
 
 if [ $vector_type == "xvector" ]; then
     mfcc_conf_file="conf/mfcc-xvector.conf"
-else
+elif [ $vector_type == "ivector" ]; then
     mfcc_conf_file="conf/mfcc-ivector.conf"
+elif [ $vector_type == "cvector" ]; then
+    mfcc_conf_file="conf/mfcc-ivector.conf" # extract 24 dim MFCCs by default.
 fi
 
 # Set exp directory.
@@ -62,6 +64,25 @@ if [ $stage -le 0 ]; then
 	set -e
 	utils/fix_data_dir.sh data/${name}
     done
+
+    # If cvector, we need to do feature extraction again for 30 dim.
+    if [ $vector_type == "cvector" ]; then
+        echo "Extracting second set of MFCCs for cvectors."
+        for name in ${dihard_dev}_2 ${dihard_eval}_2; do
+	        if [[ "$name" == "${dihard_dev}_2" ]]; then
+	            njobs=$dev_njobs
+	        else
+	            njobs=$eval_njobs
+	        fi
+	        set +e # We expect failures for short segments.
+	        steps/make_mfcc.sh \
+	            --cmd "$train_cmd --max-jobs-run 20" --nj $njobs \
+	            --write-utt2num-frames true --mfcc-config conf/mfcc-xvector.conf \
+	            data/${name} exp/make_mfcc/${name} $mfccdir
+	        set -e
+	        utils/fix_data_dir.sh data/${name}
+        done
+    fi
     echo "MFCC extraction finished. See $PWD/exp/make_mfcc for logs."
 fi
 
@@ -88,6 +109,36 @@ if [ $stage -le 1 ]; then
 	fi
 	utils/fix_data_dir.sh data/${name}_cmn
     done
+
+    dev_cmn_dir=data/${dihard_dev}_cmn
+    eval_cmn_dir=data/${dihard_eval}_cmn
+
+    echo "Performing CMN (again) for cvectors..."
+    if [ $vector_type == "cvector" ]; then
+        for name in ${dihard_dev}_2 ${dihard_eval}_2; do
+            if [[ "$name" == "${dihard_dev}_2" ]]; then
+                njobs=$dev_njobs
+            else
+                njobs=$eval_njobs
+            fi
+	        local/prepare_feats.sh \
+	            --nj $njobs --cmd "$train_cmd" \
+	            --vector-type "$vector_type" \
+	            data/$name data/${name}_cmn exp/${system_id}/${name}_cmn
+	        if [ -f data/$name/vad.scp ]; then
+	            echo "vad.scp found .. copying it"
+	            cp data/$name/vad.scp data/${name}_cmn/
+	        fi
+	        if [ -f data/$name/segments ]; then
+	            echo "Segments found .. copying it"
+	            cp data/$name/segments data/${name}_cmn/
+	        fi
+	        utils/fix_data_dir.sh data/${name}_cmn
+        done
+
+        dev_cmn_dir="data/${dihard_dev}_cmn data/${dihard_dev}_2_cmn"
+        eval_cmn_dir="data/${dihard_eval}_cmn data/${dihard_eval}_2_cmn"
+    fi
     echo "CMN finished."
 fi
 
@@ -96,26 +147,26 @@ DEV_VEC_DIR=$vec_dir/vectors_${dihard_dev}
 EVAL_VEC_DIR=$vec_dir/vectors_${dihard_eval}
 if [ $vector_type == "xvector" ]; then
     extraction_script=diarization/nnet3/xvector/extract_xvectors.sh
-else
+elif [ $vector_type == "ivector" ]; then
     extraction_script=diarization/extract_ivectors.sh
+elif [ $vector_type == "cvector" ]; then
+    extraction_script=local/extract_cvectors.sh
 fi
 if [ $stage -le 2 ]; then
     echo "Extracting ${vector_type}s for DEV..."
-    cmn_dir=data/${dihard_dev}_cmn
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $dev_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
 	--min-segment 0.5 --pca-dim $pca_dim $vec_dir \
-	$cmn_dir $DEV_VEC_DIR
+	$dev_cmn_dir $DEV_VEC_DIR
     echo "${vector_type} extraction finished for DEV. See $DEV_VEC_DIR/log for logs."
 
     echo "Extracting ${vector_type}s for EVAL..."
-    cmn_dir=data/${dihard_eval}_cmn
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $eval_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
 	--min-segment 0.5 --pca-dim $pca_dim $vec_dir \
-	$cmn_dir $EVAL_VEC_DIR
+	$eval_cmn_dir $EVAL_VEC_DIR
     echo "${vector_type} extraction finished for EVAL. See $EVAL_VEC_DIR/log for logs."
 fi
 
@@ -125,8 +176,10 @@ DEV_SCORE_DIR=$DEV_VEC_DIR/plda_scores
 EVAL_SCORE_DIR=$EVAL_VEC_DIR/plda_scores
 if [ $vector_type == "xvector" ]; then
     scoring_script=diarization/nnet3/xvector/score_plda.sh
-else
+elif [ $vector_type == "ivector" ]; then
     scoring_script=diarization/score_plda.sh
+elif [ $vector_type == "cvector" ]; then
+    scoring_script=local/score_plda.sh
 fi
 if [ $stage -le 3 ]; then
     cp $plda_path $PLDA_DIR/plda

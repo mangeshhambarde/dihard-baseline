@@ -5,7 +5,7 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 #####################################
 ### Mangesh: experiment params ######
 #####################################
-system_id="test"
+system_id="sys8"
 #####################################
 
 echo "Running system: $system_id"
@@ -52,6 +52,12 @@ elif [ $system_id == "sys7" ]; then
     vector_type="xvector"
     plda_file="vox1dev-xvector.plda"
     model_file="vox1dev-xvector.raw"
+    pca_dim=200
+elif [ $system_id == "sys8" ]; then
+    # Concatenation model. Uses vox1+dev-ivec and vox1+dev-xvec models.
+    vector_type="cvector"
+    plda_file="concat-v3-v4.plda"
+    model_file="vox1dev-ivector.ie vox1dev-ivector.ubm vox1dev-xvector.raw"
     pca_dim=200
 elif [ $system_id == "test" ]; then
     # Only for testing.
@@ -120,6 +126,12 @@ local/make_data_dir.py \
    $DIHARD_EVAL_DIR/data/single_channel/flac \
    $DIHARD_EVAL_DIR/data/single_channel/sad
 utils/fix_data_dir.sh $EVAL_DATA_DIR
+
+# If cvector, create copy of data dirs for 30 dim MFCCs.
+if [ $vector_type == "cvector" ]; then
+    utils/copy_data_dir.sh data/${system_id}_dev data/${system_id}_dev_2
+    utils/copy_data_dir.sh data/${system_id}_eval data/${system_id}_eval_2
+fi
 
 # Diarize.
 echo "Diarizing..."

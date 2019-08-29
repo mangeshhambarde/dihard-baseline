@@ -37,7 +37,7 @@ for bn in $BNS; do
     dest_path=$CONF_DIR/$bn
     cp $src_path $dest_path
 done
-BNS="flac_to_wav.sh make_data_dir.py run_beamformit.sh run_denoising.sh run_vad.sh split_rttm.py prepare_feats.sh"
+BNS="flac_to_wav.sh make_data_dir.py run_beamformit.sh run_denoising.sh run_vad.sh split_rttm.py prepare_feats.sh extract_cvectors.sh score_plda.sh"
 for bn in $BNS; do
     src_path=$SCRIPTS_DIR/$bn
     dest_path=$DIHARD_EG_DIR/local/$bn
@@ -72,5 +72,8 @@ echo "Copying appropriate mfcc.conf"
 if [ $vector_type == "ivector" ]; then
     cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR
 elif [ $vector_type == "xvector" ]; then
+    cp $DATA_DIR/mfcc-xvector.conf $CONF_DIR
+elif [ $vector_type == "cvector" ]; then
+    cp $DATA_DIR/mfcc-ivector.conf $CONF_DIR
     cp $DATA_DIR/mfcc-xvector.conf $CONF_DIR
 fi
