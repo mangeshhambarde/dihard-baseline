@@ -41,7 +41,7 @@ if [ -f path.sh ]; then . ./path.sh; fi
 . parse_options.sh || exit 1;
 
 
-if [ $# != 3 ]; then
+if [ $# != 4 ]; then
   echo "Usage: $0 <extractor-dir> <data1> <data2> <cvector-dir>"
   echo " e.g.: $0 exp/extractor_2048 data/train exp/cvectors"
   echo "main options (for others, see top of script file)"
@@ -75,28 +75,30 @@ data1=$2 # 24 dim mfcc.
 data2=$3 # 30 dim mfcc.
 dir=$4 # final cvectors.
 
-for f in $srcdir/final.ie $srcdir/final.ubm $data/feats.scp $srcdir/final.raw $srcdir/min_chunk_size $srcdir/max_chunk_size ; do
+for f in $srcdir/final.ie $srcdir/final.ubm $data1/feats.scp $data2/feats.scp $srcdir/final.raw $srcdir/min_chunk_size $srcdir/max_chunk_size ; do
   [ ! -f $f ] && echo "No such file $f" && exit 1;
 done
 
 # Extract i-vectors.
 if [ $stage -le 0 ]; then
     echo "$0: Extracting ivectors"
-    ../diarization/extract_ivectors.sh \
-    --cmd "$train_cmd --mem 5G" --nj $dev_njobs \
+    diarization/extract_ivectors.sh \
+    --cmd "$train_cmd --mem 5G" --nj $nj \
     --window 1.5 --period 0.75 --apply-cmn false \
     --min-segment 0.5 --pca-dim $pca_dim $srcdir \
     $data1 $srcdir/intermediate-ivectors || exit 1;
+    cp $srcdir/intermediate-ivectors/{segments,spk2utt,utt2spk} $dir
 fi
 
 # Extract x-vectors.
 if [ $stage -le 1 ]; then
     echo "$0: Extracting xvectors"
-    ../diarization/nnet3/xvector/extract_xvectors.sh \
-    --cmd "$train_cmd --mem 5G" --nj $dev_njobs \
+    diarization/nnet3/xvector/extract_xvectors.sh \
+    --cmd "$train_cmd --mem 5G" --nj $nj \
     --window 1.5 --period 0.75 --apply-cmn false \
     --min-segment 0.5 --pca-dim $pca_dim $srcdir \
     $data2 $srcdir/intermediate-xvectors || exit 1;
+    cp $srcdir/intermediate-xvectors/{segments,spk2utt,utt2spk} $dir
 fi
 
 # Concatenate.

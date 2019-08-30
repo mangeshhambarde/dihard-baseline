@@ -110,9 +110,6 @@ if [ $stage -le 1 ]; then
 	utils/fix_data_dir.sh data/${name}_cmn
     done
 
-    dev_cmn_dir=data/${dihard_dev}_cmn
-    eval_cmn_dir=data/${dihard_eval}_cmn
-
     echo "Performing CMN (again) for cvectors..."
     if [ $vector_type == "cvector" ]; then
         for name in ${dihard_dev}_2 ${dihard_eval}_2; do
@@ -135,30 +132,41 @@ if [ $stage -le 1 ]; then
 	        fi
 	        utils/fix_data_dir.sh data/${name}_cmn
         done
-
-        dev_cmn_dir="data/${dihard_dev}_cmn data/${dihard_dev}_2_cmn"
-        eval_cmn_dir="data/${dihard_eval}_cmn data/${dihard_eval}_2_cmn"
     fi
     echo "CMN finished."
 fi
 
-# Extract i/x-vectors for DIHARD 2019 development and evaluation set.
 DEV_VEC_DIR=$vec_dir/vectors_${dihard_dev}
 EVAL_VEC_DIR=$vec_dir/vectors_${dihard_eval}
-if [ $vector_type == "xvector" ]; then
-    extraction_script=diarization/nnet3/xvector/extract_xvectors.sh
-elif [ $vector_type == "ivector" ]; then
-    extraction_script=diarization/extract_ivectors.sh
-elif [ $vector_type == "cvector" ]; then
-    extraction_script=local/extract_cvectors.sh
-fi
+
 if [ $stage -le 2 ]; then
+    # Extract i/x-vectors for DIHARD 2019 development and evaluation set.
+    if [ $vector_type == "xvector" ]; then
+        extraction_script=diarization/nnet3/xvector/extract_xvectors.sh
+        dev_cmn_dir=data/${dihard_dev}_cmn
+        dev_cmn_dir_2=
+        eval_cmn_dir=data/${dihard_eval}_cmn
+        eval_cmn_dir_2=
+    elif [ $vector_type == "ivector" ]; then
+        extraction_script=diarization/extract_ivectors.sh
+        dev_cmn_dir=data/${dihard_dev}_cmn
+        dev_cmn_dir_2=
+        eval_cmn_dir=data/${dihard_eval}_cmn
+        eval_cmn_dir_2=
+    elif [ $vector_type == "cvector" ]; then
+        extraction_script=local/extract_cvectors.sh
+        dev_cmn_dir="data/${dihard_dev}_cmn"
+        dev_cmn_dir_2="data/${dihard_dev}_2_cmn"
+        eval_cmn_dir="data/${dihard_eval}_cmn"
+        eval_cmn_dir_2="data/${dihard_eval}_2_cmn"
+    fi
+
     echo "Extracting ${vector_type}s for DEV..."
     $extraction_script \
 	--cmd "$train_cmd --mem 5G" --nj $dev_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
 	--min-segment 0.5 --pca-dim $pca_dim $vec_dir \
-	$dev_cmn_dir $DEV_VEC_DIR
+	$dev_cmn_dir $dev_cmn_dir_2 $DEV_VEC_DIR
     echo "${vector_type} extraction finished for DEV. See $DEV_VEC_DIR/log for logs."
 
     echo "Extracting ${vector_type}s for EVAL..."
@@ -166,7 +174,7 @@ if [ $stage -le 2 ]; then
 	--cmd "$train_cmd --mem 5G" --nj $eval_njobs \
 	--window 1.5 --period 0.75 --apply-cmn false \
 	--min-segment 0.5 --pca-dim $pca_dim $vec_dir \
-	$eval_cmn_dir $EVAL_VEC_DIR
+	$eval_cmn_dir $eval_cmn_dir_2 $EVAL_VEC_DIR
     echo "${vector_type} extraction finished for EVAL. See $EVAL_VEC_DIR/log for logs."
 fi
 

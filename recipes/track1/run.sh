@@ -11,6 +11,7 @@ system_id="sys8"
 echo "Running system: $system_id"
 
 pca_dim=-1
+stage=0
 
 if [ $system_id == "sys1" ]; then
     # Baseline.
@@ -105,67 +106,78 @@ pushd $EG_DIR > /dev/null
 echo $PWD
 
 # Prepare data directory for DEV set.
-echo "Preparing data directory for DEV set..."
-DEV_DATA_DIR=data/${system_id}_dev
-rm -fr $DEV_DATA_DIR
-local/make_data_dir.py \
-   --audio_ext '.flac' \
-   --rttm_dir $DIHARD_DEV_DIR/data/single_channel/rttm \
-   $DEV_DATA_DIR \
-   $DIHARD_DEV_DIR/data/single_channel/flac \
-   $DIHARD_DEV_DIR/data/single_channel/sad
-utils/fix_data_dir.sh $DEV_DATA_DIR
+if [ $stage -le 0 ]; then
+    # Remove old directories.
+    rm -fr data/${system_id}_dev*
+    rm -fr data/${system_id}_eval*
 
-# Prepare data directory for EVAL set.
-echo "Preparing data directory for EVAL set...."
-EVAL_DATA_DIR=data/${system_id}_eval
-rm -fr $EVAL_DATA_DIR
-local/make_data_dir.py \
-   --audio_ext	'.flac'	\
-   $EVAL_DATA_DIR \
-   $DIHARD_EVAL_DIR/data/single_channel/flac \
-   $DIHARD_EVAL_DIR/data/single_channel/sad
-utils/fix_data_dir.sh $EVAL_DATA_DIR
+    DEV_DATA_DIR=data/${system_id}_dev
+    EVAL_DATA_DIR=data/${system_id}_eval
 
-# If cvector, create copy of data dirs for 30 dim MFCCs.
-if [ $vector_type == "cvector" ]; then
-    utils/copy_data_dir.sh data/${system_id}_dev data/${system_id}_dev_2
-    utils/copy_data_dir.sh data/${system_id}_eval data/${system_id}_eval_2
+    echo "Preparing data directory for DEV set..."
+    local/make_data_dir.py \
+       --audio_ext '.flac' \
+       --rttm_dir $DIHARD_DEV_DIR/data/single_channel/rttm \
+       $DEV_DATA_DIR \
+       $DIHARD_DEV_DIR/data/single_channel/flac \
+       $DIHARD_DEV_DIR/data/single_channel/sad
+    utils/fix_data_dir.sh $DEV_DATA_DIR
+
+    # Prepare data directory for EVAL set.
+    echo "Preparing data directory for EVAL set...."
+    local/make_data_dir.py \
+       --audio_ext	'.flac'	\
+       $EVAL_DATA_DIR \
+       $DIHARD_EVAL_DIR/data/single_channel/flac \
+       $DIHARD_EVAL_DIR/data/single_channel/sad
+    utils/fix_data_dir.sh $EVAL_DATA_DIR
+
+    # If cvector, create copy of data dirs for 30 dim MFCCs.
+    if [ $vector_type == "cvector" ]; then
+        utils/copy_data_dir.sh data/${system_id}_dev data/${system_id}_dev_2
+        utils/copy_data_dir.sh data/${system_id}_eval data/${system_id}_eval_2
+    fi
 fi
 
 # Diarize.
-echo "Diarizing..."
-./alltracksrun.sh --vector_type $vector_type --plda_path $exp_dir/plda --njobs $NJOBS --pca_dim $pca_dim --system-id $system_id
+if [ $stage -le 1 ]; then
+    echo "Diarizing..."
+    ./alltracksrun.sh --vector_type $vector_type --plda_path $exp_dir/plda --njobs $NJOBS --pca_dim $pca_dim --system-id $system_id
+fi
 
 # Extract dev/eval RTTM files.
-echo "Extracting RTTM files..."
-DEV_RTTM_DIR=$THIS_DIR/rttm/$system_id/rttm_dev
-mkdir -p DEV_RTTM_DIR
-local/split_rttm.py \
-    $exp_dir/vectors_${system_id}_dev/plda_scores/rttm $DEV_RTTM_DIR
-EVAL_RTTM_DIR=$THIS_DIR/rttm/$system_id/rttm_eval
-mkdir -p EVAL_RTTM_DIR
-local/split_rttm.py \
-    $exp_dir/vectors_${system_id}_eval/plda_scores/rttm $EVAL_RTTM_DIR
+if [ $stage -le 2 ]; then
+    echo "Extracting RTTM files..."
+    DEV_RTTM_DIR=$THIS_DIR/rttm/$system_id/rttm_dev
+    mkdir -p DEV_RTTM_DIR
+    local/split_rttm.py \
+        $exp_dir/vectors_${system_id}_dev/plda_scores/rttm $DEV_RTTM_DIR
+    EVAL_RTTM_DIR=$THIS_DIR/rttm/$system_id/rttm_eval
+    mkdir -p EVAL_RTTM_DIR
+    local/split_rttm.py \
+        $exp_dir/vectors_${system_id}_eval/plda_scores/rttm $EVAL_RTTM_DIR
 
-popd > /dev/null
+    popd > /dev/null
+fi
 
 # Score system outputs for DEV set against reference.
-METRICS_DIR=$THIS_DIR/metrics/$system_id
-mkdir -p $METRICS_DIR
-echo "Scoring DEV set RTTM..."
-$PYTHON $DSCORE_DIR/score.py \
-    -u $DIHARD_DEV_DIR/data/single_channel/uem/all.uem \
-    -r $DIHARD_DEV_DIR/data/single_channel/rttm/*.rttm \
-    -s $DEV_RTTM_DIR/*.rttm \
-    > $METRICS_DIR/metrics_dev.stdout 2> $METRICS_DIR/metrics_dev.stderr
+if [ $stage -le 3 ]; then
+    METRICS_DIR=$THIS_DIR/metrics/$system_id
+    mkdir -p $METRICS_DIR
+    echo "Scoring DEV set RTTM..."
+    $PYTHON $DSCORE_DIR/score.py \
+        -u $DIHARD_DEV_DIR/data/single_channel/uem/all.uem \
+        -r $DIHARD_DEV_DIR/data/single_channel/rttm/*.rttm \
+        -s $DEV_RTTM_DIR/*.rttm \
+        > $METRICS_DIR/metrics_dev.stdout 2> $METRICS_DIR/metrics_dev.stderr
 
-# Score system outputs for EVAL set against reference.
-echo "Scoring EVAL set RTTM..."
-$PYTHON $DSCORE_DIR/score.py \
-    -u $DIHARD_EVAL_DIR/data/single_channel/uem/all.uem \
-    -r $DIHARD_EVAL_DIR/data/single_channel/rttm/*.rttm \
-    -s $EVAL_RTTM_DIR/*.rttm \
-    > $METRICS_DIR/metrics_eval.stdout 2> $METRICS_DIR/metrics_eval.stderr
+    # Score system outputs for EVAL set against reference.
+    echo "Scoring EVAL set RTTM..."
+    $PYTHON $DSCORE_DIR/score.py \
+        -u $DIHARD_EVAL_DIR/data/single_channel/uem/all.uem \
+        -r $DIHARD_EVAL_DIR/data/single_channel/rttm/*.rttm \
+        -s $EVAL_RTTM_DIR/*.rttm \
+        > $METRICS_DIR/metrics_eval.stdout 2> $METRICS_DIR/metrics_eval.stderr
 
-echo "Run finished successfully."
+    echo "Run finished successfully."
+fi
