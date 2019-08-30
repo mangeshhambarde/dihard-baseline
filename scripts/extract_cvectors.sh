@@ -87,7 +87,6 @@ if [ $stage -le 0 ]; then
     --window 1.5 --period 0.75 --apply-cmn false \
     --min-segment 0.5 --pca-dim $pca_dim $srcdir \
     $data1 $srcdir/intermediate-ivectors || exit 1;
-    cp $srcdir/intermediate-ivectors/{segments,spk2utt,utt2spk} $dir
 fi
 
 # Extract x-vectors.
@@ -98,7 +97,6 @@ if [ $stage -le 1 ]; then
     --window 1.5 --period 0.75 --apply-cmn false \
     --min-segment 0.5 --pca-dim $pca_dim $srcdir \
     $data2 $srcdir/intermediate-xvectors || exit 1;
-    cp $srcdir/intermediate-xvectors/{segments,spk2utt,utt2spk} $dir
 fi
 
 # Concatenate.
@@ -110,6 +108,8 @@ if [ $stage -le 2 ]; then
         scp:$srcdir/intermediate-ivectors/ivector.scp \
         scp:$srcdir/intermediate-xvectors/xvector.scp \
         ark,scp:$dir/cvector.ark,$dir/cvector.scp || exit 1;
+    # Copy files that PLDA needs from one of the dirs.
+    cp $srcdir/intermediate-ivectors/{segments,spk2utt,utt2spk} $dir
 fi
 
 if [ $stage -le 3 ]; then

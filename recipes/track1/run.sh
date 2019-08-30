@@ -5,7 +5,7 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 #####################################
 ### Mangesh: experiment params ######
 #####################################
-system_id="sys8"
+system_id="sys9"
 #####################################
 
 echo "Running system: $system_id"
@@ -59,6 +59,13 @@ elif [ $system_id == "sys8" ]; then
     vector_type="cvector"
     plda_file="concat-v3-v4.plda"
     model_file="vox1dev-ivector.ie vox1dev-ivector.ubm vox1dev-xvector.raw"
+    pca_dim=200
+elif [ $system_id == "sys9" ]; then
+    # Concatenation model. Uses kaldi's v1 and v2 models from egs/voxceleb/.
+    # Trained PLDA backend using egs/dihard2_voxceleb/v6.
+    vector_type="cvector"
+    plda_file="concat-v1-v2.plda"
+    model_file="ivector-pretrained.ie ivector-pretrained.ubm xvector-pretrained.raw"
     pca_dim=200
 elif [ $system_id == "test" ]; then
     # Only for testing.
