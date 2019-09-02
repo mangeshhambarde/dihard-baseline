@@ -122,7 +122,7 @@ if [ $stage -le 4 ]; then
   if [ -z "$pca_dim" ]; then
     pca_dim=-1
   fi
-  echo "$0: Computing whitening transform"
+  echo "$0: Computing whitening transform for cvectors with dim=$pca_dim"
   $cmd $dir/log/transform.log \
     est-pca --read-vectors=true --normalize-mean=false \
       --normalize-variance=true --dim=$pca_dim \

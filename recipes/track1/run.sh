@@ -64,9 +64,9 @@ elif [ $system_id == "sys9" ]; then
     # Concatenation model. Uses kaldi's v1 and v2 models from egs/voxceleb/.
     # Trained PLDA backend using egs/dihard2_voxceleb/v6.
     vector_type="cvector"
-    plda_file="concat-v1-v2.plda"
+    plda_file="concat-v1-v2-dim-800.plda"
     model_file="ivector-pretrained.ie ivector-pretrained.ubm xvector-pretrained.raw"
-    pca_dim=200
+    pca_dim=800
 elif [ $system_id == "test" ]; then
     # Only for testing.
     vector_type="xvector"
@@ -169,7 +169,7 @@ fi
 
 # Score system outputs for DEV set against reference.
 if [ $stage -le 3 ]; then
-    METRICS_DIR=$THIS_DIR/metrics/$system_id
+    METRICS_DIR=$THIS_DIR/metrics/$system_id/$pca_dim
     mkdir -p $METRICS_DIR
     echo "Scoring DEV set RTTM..."
     $PYTHON $DSCORE_DIR/score.py \
