@@ -5,7 +5,7 @@ export PATH="/share/spandh.ami1/sw/std/python/anaconda3-5.1.0/v5.1.0/bin:$PATH" 
 #####################################
 ### Mangesh: experiment params ######
 #####################################
-system_id="sys9"
+system_id="sys10"
 #####################################
 
 echo "Running system: $system_id"
@@ -67,6 +67,12 @@ elif [ $system_id == "sys9" ]; then
     plda_file="concat-v1-v2-dim-800.plda"
     model_file="ivector-pretrained.ie ivector-pretrained.ubm xvector-pretrained.raw"
     pca_dim=800
+elif [ $system_id == "sys10" ]; then
+    # x-vector trained using dev set + aug.
+    vector_type="xvector"
+    plda_file="dev-xvector-aug.plda"
+    model_file="dev-xvector-aug.raw"
+    pca_dim=200
 elif [ $system_id == "test" ]; then
     # Only for testing.
     vector_type="xvector"
